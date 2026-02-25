@@ -97,59 +97,140 @@
   }
 
   #side-panel {
-    width: 260px;
-    background: #16213e;
-    border-left: 2px solid #0f3460;
+    width: 280px;
+    background: linear-gradient(180deg, #141c30 0%, #111827 100%);
+    border-left: 1px solid #1e2d4a;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #1e2d4a transparent;
   }
 
+  #side-panel::-webkit-scrollbar { width: 4px; }
+  #side-panel::-webkit-scrollbar-track { background: transparent; }
+  #side-panel::-webkit-scrollbar-thumb { background: #1e2d4a; border-radius: 2px; }
+
   .panel-section {
-    padding: 12px;
-    border-bottom: 1px solid #0f3460;
+    padding: 14px 16px;
+    border-bottom: 1px solid #1e2d4a;
   }
 
   .panel-title {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #e94560;
+    font-size: 10px;
+    color: #586880;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 8px;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #1e2d4a, transparent);
   }
 
   .unit-card {
-    background: #1a1a2e;
-    border: 1px solid #0f3460;
-    border-radius: 4px;
-    padding: 8px;
+    background: #0d1320;
+    border: 1px solid #1e2d4a;
+    border-radius: 6px;
+    padding: 10px 12px;
     margin-bottom: 6px;
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: all 0.15s ease;
     font-size: 12px;
+    position: relative;
+    overflow: hidden;
   }
 
-  .unit-card:hover { border-color: #e94560; }
-  .unit-card.selected { border-color: #e94560; background: #1f1f3a; }
+  .unit-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--unit-color, #e94560);
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+
+  .unit-card:hover {
+    border-color: #2a3f5f;
+    background: #111b2e;
+  }
+
+  .unit-card:hover::before { opacity: 0.8; }
+
+  .unit-card.selected {
+    border-color: var(--unit-color, #e94560);
+    background: #111b2e;
+    box-shadow: 0 0 12px rgba(233, 69, 96, 0.1);
+  }
+
+  .unit-card.selected::before { opacity: 1; }
 
   .unit-card > * {
     pointer-events: none;
   }
 
-  .unit-card .unit-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
-    font-size: 12px;
+  .unit-card .unit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 4px;
   }
 
+  .unit-card .unit-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  .unit-card .unit-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .unit-status.idle { background: #1e2d4a; color: #586880; }
+  .unit-status.moving { background: #1a3a2a; color: #2ecc71; }
+  .unit-status.fighting { background: #3a1a1a; color: #e94560; }
+  .unit-status.clearing { background: #3a351a; color: #f1c40f; }
+  .unit-status.evacuating { background: #1a2a3a; color: #3498db; }
+  .unit-status.nowater { background: #3a1a1a; color: #e74c3c; animation: pulse-warn 1s infinite; }
+
+  @keyframes pulse-warn {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .unit-card .unit-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #586880;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
   .unit-card .unit-bar {
-    height: 4px;
-    background: #0f3460;
+    flex: 1;
+    height: 3px;
+    background: #1e2d4a;
     border-radius: 2px;
-    margin-top: 4px;
     overflow: hidden;
   }
 
@@ -159,24 +240,113 @@
     transition: width 0.3s;
   }
 
-  .water-fill { background: #3498db; }
-  .fuel-fill { background: #f39c12; }
+  .water-fill { background: linear-gradient(90deg, #2471a3, #3498db); }
+
+  .unit-card .route-tag {
+    font-size: 9px;
+    color: #64dcff;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .deploy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .deploy-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 10px 8px;
+    background: #0d1320;
+    color: var(--btn-color);
+    border: 1px solid #1e2d4a;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.4;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .deploy-btn:hover {
+    border-color: var(--btn-color);
+    background: #111b2e;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--btn-color) 15%, transparent);
+  }
+
+  .deploy-btn.active-deploy {
+    border-color: var(--btn-color);
+    background: color-mix(in srgb, var(--btn-color) 10%, #0d1320);
+  }
+
+  .deploy-btn .deploy-key {
+    display: inline-block;
+    background: #1e2d4a;
+    color: #a0a0b0;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .deploy-btn .deploy-name {
+    display: block;
+    font-weight: 700;
+    font-size: 11px;
+    margin: 3px 0;
+  }
+
+  .deploy-btn .deploy-cost {
+    font-size: 10px;
+    color: #586880;
+  }
 
   #alerts {
-    max-height: 140px;
+    max-height: 160px;
     overflow-y: auto;
     font-size: 11px;
+    scrollbar-width: thin;
+    scrollbar-color: #1e2d4a transparent;
   }
+
+  #alerts::-webkit-scrollbar { width: 3px; }
+  #alerts::-webkit-scrollbar-track { background: transparent; }
+  #alerts::-webkit-scrollbar-thumb { background: #1e2d4a; border-radius: 2px; }
 
   .alert-item {
-    padding: 4px 0;
-    border-bottom: 1px solid #0f346033;
-    color: #a0a0b0;
+    padding: 5px 8px;
+    margin-bottom: 3px;
+    border-radius: 4px;
+    color: #586880;
     font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: #0d1320;
+    border-left: 2px solid #1e2d4a;
+    line-height: 1.4;
   }
 
-  .alert-item.critical { color: #e94560; }
-  .alert-item.warning { color: #f39c12; }
+  .alert-item.critical {
+    color: #e94560;
+    border-left-color: #e94560;
+    background: #1a0d12;
+  }
+
+  .alert-item.warning {
+    color: #f39c12;
+    border-left-color: #f39c12;
+    background: #1a170d;
+  }
+
+  .alert-item .alert-time {
+    color: #3a4a60;
+    font-size: 9px;
+    margin-right: 6px;
+  }
 
   #bottom-bar {
     height: 36px;
@@ -349,17 +519,17 @@
     <canvas id="game"></canvas>
   </div>
   <div id="side-panel">
-    <div class="panel-section">
+    <div class="panel-section" style="padding-bottom:10px;">
       <div class="panel-title">Minimap</div>
-      <canvas id="minimap"></canvas>
-    </div>
-    <div class="panel-section">
-      <div class="panel-title">Units</div>
-      <div id="unit-list"></div>
+      <canvas id="minimap" style="border-radius:4px;border:1px solid #1e2d4a;"></canvas>
     </div>
     <div class="panel-section">
       <div class="panel-title">Deploy</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;" id="deploy-btns"></div>
+      <div class="deploy-grid" id="deploy-btns"></div>
+    </div>
+    <div class="panel-section" style="flex:1;">
+      <div class="panel-title">Units <span id="unit-count" style="color:#3a4a60;font-size:9px;letter-spacing:0;"></span></div>
+      <div id="unit-list"></div>
     </div>
     <div class="panel-section">
       <div class="panel-title">Alerts</div>
@@ -1241,43 +1411,63 @@ function updateUI() {
 
   // Unit list
   const ul = document.getElementById('unit-list');
+  const activeUnits = units.filter(u => u.active);
+  document.getElementById('unit-count').textContent = activeUnits.length > 0 ? `(${activeUnits.length})` : '';
   ul.innerHTML = '';
-  for (const u of units) {
-    if (!u.active) continue;
+  for (const u of activeUnits) {
     const def = UNIT_DEFS[u.type];
     const card = document.createElement('div');
     card.className = 'unit-card' + (u === selectedUnit ? ' selected' : '');
-    let status = 'Idle';
-    if (Math.hypot(u.targetX - u.x, u.targetY - u.y) > 0.3) status = 'Moving';
-    if (u.fighting) status = 'Fighting fire';
-    if (u.clearing) status = 'Clearing';
-    if (u.evacuating) status = 'Evacuating';
-    if (def.water > 0 && u.water <= 0) status = 'No water!';
+    card.style.setProperty('--unit-color', def.color);
 
+    let status = 'Idle';
+    let statusClass = 'idle';
+    if (Math.hypot(u.targetX - u.x, u.targetY - u.y) > 0.3) { status = 'Moving'; statusClass = 'moving'; }
+    if (u.fighting) { status = 'Fighting'; statusClass = 'fighting'; }
+    if (u.clearing) { status = 'Clearing'; statusClass = 'clearing'; }
+    if (u.evacuating) { status = 'Evac'; statusClass = 'evacuating'; }
+    if (def.water > 0 && u.water <= 0) { status = 'No water'; statusClass = 'nowater'; }
+
+    const waterPct = def.water > 0 ? (u.water / u.maxWater) : -1;
     const routeInfo = u.waypoints.length > 0
-      ? `<div style="color:#64dcff;font-size:10px;">Route: ${u.waypoints.length} wp${u.loopRoute ? ' ↻' : ''}</div>`
-      : (u.loopRoute ? `<div style="color:#64dcff;font-size:10px;">Patrol ↻</div>` : '');
+      ? `<span class="route-tag">⬡ ${u.waypoints.length} wp${u.loopRoute ? ' ↻' : ''}</span>`
+      : (u.loopRoute ? `<span class="route-tag">↻ patrol</span>` : '');
+
     card.innerHTML = `
-      <div class="unit-name" style="color:${def.color}">${def.name} #${u.id}</div>
-      <div>${status}</div>
-      ${routeInfo}
-      ${def.water > 0 ? `
-        <div class="unit-bar"><div class="unit-bar-fill water-fill" style="width:${(u.water/u.maxWater)*100}%"></div></div>
-      ` : ''}
+      <div class="unit-header">
+        <span class="unit-name" style="color:${def.color}">${def.name} #${u.id}</span>
+        <span class="unit-status ${statusClass}">${status}</span>
+      </div>
+      <div class="unit-meta">
+        ${waterPct >= 0 ? `
+          <span style="color:${waterPct > 0.3 ? '#3498db' : '#e74c3c'}">⬤</span>
+          <div class="unit-bar"><div class="unit-bar-fill water-fill" style="width:${waterPct*100}%"></div></div>
+          <span>${Math.round(waterPct*100)}%</span>
+        ` : ''}
+        ${routeInfo}
+      </div>
     `;
-    card.style.pointerEvents = 'auto';
     const unitRef = u;
     card.addEventListener('click', (e) => { e.stopPropagation(); selectedUnit = unitRef; deployMode = null; });
     ul.appendChild(card);
   }
 
+  // Deploy button active state
+  document.querySelectorAll('.deploy-btn').forEach(btn => {
+    btn.classList.toggle('active-deploy', btn.dataset.type === deployMode);
+  });
+
   // Alerts
   const al = document.getElementById('alerts');
   al.innerHTML = '';
-  alerts.slice(0, 10).forEach(a => {
+  const secs2 = Math.floor(gameTick / 30);
+  alerts.slice(0, 12).forEach(a => {
     const div = document.createElement('div');
     div.className = 'alert-item ' + (a.type || '');
-    div.textContent = a.msg;
+    const aTime = Math.floor(a.time / 30);
+    const aMins = Math.floor(aTime / 60);
+    const aSecs = aTime % 60;
+    div.innerHTML = `<span class="alert-time">${aMins}:${aSecs.toString().padStart(2,'0')}</span>${a.msg}`;
     al.appendChild(div);
   });
 }
@@ -1287,13 +1477,14 @@ function buildDeployButtons() {
   wrap.innerHTML = '';
   for (const [key, def] of Object.entries(UNIT_DEFS)) {
     const btn = document.createElement('button');
-    btn.style.cssText = `
-      font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 8px;
-      background: ${def.color}22; color: ${def.color}; border: 1px solid ${def.color}55;
-      border-radius: 3px; cursor: pointer; flex: 1; min-width: 100px;
-      position: relative; text-align: center; line-height: 1.5;
-    `;
-    btn.innerHTML = `<span style="pointer-events:none"><b>[${def.key}]</b> ${def.name}<br>$${def.cost}</span>`;
+    btn.className = 'deploy-btn';
+    btn.dataset.type = key;
+    btn.style.setProperty('--btn-color', def.color);
+    btn.innerHTML = `<span style="pointer-events:none">
+      <span class="deploy-key">${def.key}</span>
+      <span class="deploy-name">${def.name}</span>
+      <span class="deploy-cost">$${def.cost}</span>
+    </span>`;
     btn.addEventListener('click', (e) => { e.stopPropagation(); deployMode = key; selectedUnit = null; });
     wrap.appendChild(btn);
   }

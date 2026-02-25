@@ -2,6 +2,8 @@
 
 A real-time strategy game where you command firefighting units to contain wildfires across a procedurally generated landscape. Dispatch trucks, squads, helicopters, and bulldozers — set up patrol routes and let them operate autonomously while you focus on the big picture.
 
+![Firefighter Commander gameplay](screenshots/v1.png)
+
 ## Play
 
 Open `index.html` in any modern browser. No build step, no dependencies — single file, pure Canvas + JS.
