@@ -6,7 +6,7 @@ A real-time strategy game where you command firefighting units to contain wildfi
 
 ## Play
 
-Open `index.html` in any modern browser. No build step, no dependencies — single file, pure Canvas + JS.
+**[Play online](https://iloire.github.io/firefighter-commander/)** — or open `index.html` locally in any modern browser. No build step, no dependencies — single file, pure Canvas + JS.
 
 ## Gameplay
 
