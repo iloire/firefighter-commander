@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firefighter Commander</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    color: #e0ddd5;
+    font-family: 'Bitter', serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  #top-bar {
+    height: 48px;
+    background: #16213e;
+    border-bottom: 2px solid #e94560;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 24px;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  #top-bar .title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    color: #e94560;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: #a0a0b0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat .val {
+    color: #e0ddd5;
+    font-weight: 700;
+  }
+
+  .stat .icon {
+    font-size: 16px;
+  }
+
+  #pause-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    margin-left: auto;
+  }
+
+  #pause-badge.paused {
+    background: #e94560;
+    color: #fff;
+  }
+
+  #pause-badge.running {
+    background: #2ecc71;
+    color: #1a1a2e;
+  }
+
+  #main-area {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  #side-panel {
+    width: 260px;
+    background: #16213e;
+    border-left: 2px solid #0f3460;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .panel-section {
+    padding: 12px;
+    border-bottom: 1px solid #0f3460;
+  }
+
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #e94560;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .unit-card {
+    background: #1a1a2e;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    font-size: 12px;
+  }
+
+  .unit-card:hover { border-color: #e94560; }
+  .unit-card.selected { border-color: #e94560; background: #1f1f3a; }
+
+  .unit-card > * {
+    pointer-events: none;
+  }
+
+  .unit-card .unit-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .unit-card .unit-bar {
+    height: 4px;
+    background: #0f3460;
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .unit-card .unit-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .water-fill { background: #3498db; }
+  .fuel-fill { background: #f39c12; }
+
+  #alerts {
+    max-height: 140px;
+    overflow-y: auto;
+    font-size: 11px;
+  }
+
+  .alert-item {
+    padding: 4px 0;
+    border-bottom: 1px solid #0f346033;
+    color: #a0a0b0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .alert-item.critical { color: #e94560; }
+  .alert-item.warning { color: #f39c12; }
+
+  #bottom-bar {
+    height: 36px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #606080;
+    flex-shrink: 0;
+  }
+
+  .wind-arrow {
+    display: inline-block;
+    font-size: 16px;
+    color: #3498db;
+    transition: transform 0.5s;
+  }
+
+  #minimap {
+    width: 100%;
+    height: 140px;
+    border-radius: 3px;
+    image-rendering: pixelated;
+  }
+
+  /* Start screen overlay */
+  #start-screen {
+    position: fixed;
+    inset: 0;
+    background: #1a1a2eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #start-screen h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 36px;
+    color: #e94560;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  #start-screen p {
+    color: #a0a0b0;
+    font-size: 14px;
+    margin-bottom: 30px;
+    text-align: center;
+    max-width: 500px;
+    line-height: 1.6;
+  }
+
+  #start-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px 40px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+
+  #start-btn:hover { background: #c0392b; }
+
+  #game-over {
+    position: fixed;
+    inset: 0;
+    background: #1a1a2eee;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #game-over h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    color: #e94560;
+    margin-bottom: 16px;
+  }
+
+  #game-over .final-stats {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #a0a0b0;
+    margin-bottom: 24px;
+    text-align: center;
+    line-height: 2;
+  }
+
+  #restart-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 32px;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #restart-btn:hover { background: #c0392b; }
+
+  .key-hint {
+    display: inline-block;
+    background: #0f3460;
+    color: #e0ddd5;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin: 0 2px;
+  }
+</style>
+</head>
+<body>
+
+<div id="start-screen">
+  <h1>Firefighter Commander</h1>
+  <p>
+    Wildfires are breaking out across the region. As fire commander, dispatch your units
+    to contain the blaze, evacuate civilians, and protect critical infrastructure.
+    <br><br>
+    <span class="key-hint">SPACE</span> Pause / Resume &nbsp;
+    <span class="key-hint">CLICK</span> Select &amp; Command &nbsp;
+    <span class="key-hint">CTRL+CLICK</span> Queue waypoints &nbsp;
+    <span class="key-hint">L</span> Toggle patrol loop &nbsp;
+    <span class="key-hint">X</span> Clear route<br><br>
+    <span class="key-hint">SCROLL</span> Zoom &nbsp;
+    <span class="key-hint">SHIFT+DRAG</span> Pan map &nbsp;
+    <span class="key-hint">1-4</span> Deploy units
+  </p>
+  <button id="start-btn">Start Mission</button>
+</div>
+
+<div id="game-over">
+  <h1>Mission Failed</h1>
+  <div class="final-stats" id="final-stats"></div>
+  <button id="restart-btn">Try Again</button>
+</div>
+
+<div id="top-bar">
+  <div class="title">Fire Command</div>
+  <div class="stat"><span class="icon">🏠</span> Saved: <span class="val" id="stat-saved">0</span></div>
+  <div class="stat"><span class="icon">🔥</span> Lost: <span class="val" id="stat-lost">0</span></div>
+  <div class="stat"><span class="icon">👥</span> Evacuated: <span class="val" id="stat-evac">0</span></div>
+  <div class="stat"><span class="icon">⏱</span> <span class="val" id="stat-time">0:00</span></div>
+  <div class="stat"><span class="icon">💰</span> <span class="val" id="stat-budget">500</span></div>
+  <div id="pause-badge" class="paused">PAUSED</div>
+</div>
+
+<div id="main-area">
+  <div id="canvas-wrap">
+    <canvas id="game"></canvas>
+  </div>
+  <div id="side-panel">
+    <div class="panel-section">
+      <div class="panel-title">Minimap</div>
+      <canvas id="minimap"></canvas>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Units</div>
+      <div id="unit-list"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Deploy</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;" id="deploy-btns"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Alerts</div>
+      <div id="alerts"></div>
+    </div>
+  </div>
+</div>
+
+<div id="bottom-bar">
+  <span>Wind: <span class="wind-arrow" id="wind-arrow">➤</span> <span id="wind-speed">5</span> km/h</span>
+  <span>|</span>
+  <span>Tiles burning: <span id="stat-burning">0</span></span>
+  <span>|</span>
+  <span>Wave: <span id="stat-wave">1</span></span>
+  <span style="margin-left:auto;">
+    <span class="key-hint">SPACE</span> pause &nbsp;
+    <span class="key-hint">1-4</span> deploy &nbsp;
+    <span class="key-hint">CTRL+CLICK</span> queue wp &nbsp;
+    <span class="key-hint">L</span> loop &nbsp;
+    <span class="key-hint">X</span> clear route
+  </span>
+</div>
+
+<script>
+// ─── Constants ───
+const TILE = 20;
+const MAP_W = 120;
+const MAP_H = 80;
+const TERRAIN = {
+  GRASS: 0, FOREST: 1, DENSE_FOREST: 2, HOUSE: 3, ROAD: 4,
+  LAKE: 5, HOSPITAL: 6, SCHOOL: 7, FIRE_STATION: 8, GAS_STATION: 9
+};
+const TERRAIN_COLORS = {
+  [TERRAIN.GRASS]: '#4a7c3f',
+  [TERRAIN.FOREST]: '#2d5a1e',
+  [TERRAIN.DENSE_FOREST]: '#1e4010',
+  [TERRAIN.HOUSE]: '#8b7355',
+  [TERRAIN.ROAD]: '#555566',
+  [TERRAIN.LAKE]: '#2471a3',
+  [TERRAIN.HOSPITAL]: '#ecf0f1',
+  [TERRAIN.SCHOOL]: '#f0c040',
+  [TERRAIN.FIRE_STATION]: '#e94560',
+  [TERRAIN.GAS_STATION]: '#7f8c8d',
+};
+const FLAMMABILITY = {
+  [TERRAIN.GRASS]: 0.4, [TERRAIN.FOREST]: 0.7, [TERRAIN.DENSE_FOREST]: 0.9,
+  [TERRAIN.HOUSE]: 0.5, [TERRAIN.ROAD]: 0, [TERRAIN.LAKE]: 0,
+  [TERRAIN.HOSPITAL]: 0.4, [TERRAIN.SCHOOL]: 0.4, [TERRAIN.FIRE_STATION]: 0.3,
+  [TERRAIN.GAS_STATION]: 0.95,
+};
+const BURN_TIME = {
+  [TERRAIN.GRASS]: 80, [TERRAIN.FOREST]: 200, [TERRAIN.DENSE_FOREST]: 300,
+  [TERRAIN.HOUSE]: 350, [TERRAIN.ROAD]: 0, [TERRAIN.LAKE]: 0,
+  [TERRAIN.HOSPITAL]: 400, [TERRAIN.SCHOOL]: 400, [TERRAIN.FIRE_STATION]: 350,
+  [TERRAIN.GAS_STATION]: 120,
+};
+const STRUCTURE_VALUE = {
+  [TERRAIN.HOUSE]: 10, [TERRAIN.HOSPITAL]: 50, [TERRAIN.SCHOOL]: 40,
+  [TERRAIN.FIRE_STATION]: 30, [TERRAIN.GAS_STATION]: 15,
+};
+const UNIT_DEFS = {
+  truck: { name: 'Fire Truck', cost: 80, speed: 1.8, water: 100, range: 2.5, power: 0.8, color: '#e74c3c', key: '1' },
+  squad: { name: 'Squad', cost: 40, speed: 2.8, water: 40, range: 1.5, power: 0.4, color: '#f39c12', canEvac: true, key: '2' },
+  heli: { name: 'Helicopter', cost: 150, speed: 4.5, water: 60, range: 3.5, power: 1.5, color: '#9b59b6', flying: true, key: '3' },
+  dozer: { name: 'Bulldozer', cost: 100, speed: 1.0, water: 0, range: 1.2, power: 0, color: '#f1c40f', canClear: true, key: '4' },
+};
+
+// ─── Game State ───
+let map, fireMap, burnMap, smokeMap;
+let units = [];
+let alerts = [];
+let paused = true;
+let gameStarted = false;
+let gameOver = false;
+let gameTick = 0;
+let wave = 1;
+let budget = 500;
+let structuresSaved = 0;
+let structuresLost = 0;
+let civiliansEvac = 0;
+let selectedUnit = null;
+let deployMode = null;
+let totalStructures = 0;
+let damagePercent = 0;
+
+// Camera
+let camX = 0, camY = 0, zoom = 1;
+let dragging = false, dragStartX, dragStartY, camStartX, camStartY;
+
+// Wind
+let windAngle = Math.PI * 0.25;
+let windSpeed = 5;
+let windChangeTimer = 0;
+
+// Canvas
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap');
+const miniCtx = miniCanvas.getContext('2d');
+
+// ─── Noise (simple value noise) ───
+function makeNoise(seed) {
+  const p = new Array(512);
+  let s = seed;
+  function rng() { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; }
+  for (let i = 0; i < 256; i++) p[i] = rng();
+  for (let i = 256; i < 512; i++) p[i] = p[i - 256];
+  return function(x, y) {
+    const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+    const xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const a = p[xi] + yi, b = p[xi + 1] + yi;
+    return (1 - v) * ((1 - u) * p[a] + u * p[b]) + v * ((1 - u) * p[a + 1] + u * p[b + 1]);
+  };
+}
+
+// ─── Map Generation ───
+function generateMap() {
+  const seed = Date.now();
+  const noise1 = makeNoise(seed);
+  const noise2 = makeNoise(seed + 999);
+  const noise3 = makeNoise(seed + 1337);
+  map = new Uint8Array(MAP_W * MAP_H);
+  fireMap = new Float32Array(MAP_W * MAP_H);
+  burnMap = new Float32Array(MAP_W * MAP_H);
+  smokeMap = new Float32Array(MAP_W * MAP_H);
+  totalStructures = 0;
+
+  // Base terrain
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const v1 = noise1(x * 0.05, y * 0.05);
+      const v2 = noise2(x * 0.08, y * 0.08);
+      const v3 = noise3(x * 0.03, y * 0.03);
+      const i = y * MAP_W + x;
+
+      if (v3 < 0.12) {
+        map[i] = TERRAIN.LAKE;
+      } else if (v1 > 0.65) {
+        map[i] = TERRAIN.DENSE_FOREST;
+      } else if (v1 > 0.42) {
+        map[i] = TERRAIN.FOREST;
+      } else {
+        map[i] = TERRAIN.GRASS;
+      }
+    }
+  }
+
+  // Roads (horizontal and vertical)
+  const numRoadsH = 3 + Math.floor(Math.random() * 3);
+  const numRoadsV = 3 + Math.floor(Math.random() * 3);
+  for (let r = 0; r < numRoadsH; r++) {
+    let y = 8 + Math.floor(Math.random() * (MAP_H - 16));
+    for (let x = 0; x < MAP_W; x++) {
+      const drift = Math.round(Math.sin(x * 0.1) * 1.5);
+      const ry = Math.max(0, Math.min(MAP_H - 1, y + drift));
+      if (map[ry * MAP_W + x] !== TERRAIN.LAKE) map[ry * MAP_W + x] = TERRAIN.ROAD;
+    }
+  }
+  for (let r = 0; r < numRoadsV; r++) {
+    let x = 8 + Math.floor(Math.random() * (MAP_W - 16));
+    for (let y = 0; y < MAP_H; y++) {
+      const drift = Math.round(Math.sin(y * 0.08) * 1.5);
+      const rx = Math.max(0, Math.min(MAP_W - 1, x + drift));
+      if (map[y * MAP_W + rx] !== TERRAIN.LAKE) map[y * MAP_W + rx] = TERRAIN.ROAD;
+    }
+  }
+
+  // Villages (clusters of houses near road intersections)
+  const villages = [];
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const vx = 10 + Math.floor(Math.random() * (MAP_W - 20));
+    const vy = 10 + Math.floor(Math.random() * (MAP_H - 20));
+    // Check near road
+    let nearRoad = false;
+    for (let dy = -3; dy <= 3 && !nearRoad; dy++)
+      for (let dx = -3; dx <= 3 && !nearRoad; dx++)
+        if (map[(vy + dy) * MAP_W + (vx + dx)] === TERRAIN.ROAD) nearRoad = true;
+
+    if (!nearRoad) continue;
+    // Check distance from other villages
+    let tooClose = villages.some(v => Math.hypot(v.x - vx, v.y - vy) < 15);
+    if (tooClose) continue;
+
+    villages.push({ x: vx, y: vy });
+    const size = 3 + Math.floor(Math.random() * 4);
+    for (let dy = -size; dy <= size; dy++) {
+      for (let dx = -size; dx <= size; dx++) {
+        const px = vx + dx, py = vy + dy;
+        if (px < 0 || px >= MAP_W || py < 0 || py >= MAP_H) continue;
+        const i = py * MAP_W + px;
+        if (map[i] === TERRAIN.LAKE || map[i] === TERRAIN.ROAD) continue;
+        if (Math.random() < 0.4 && Math.hypot(dx, dy) < size) {
+          map[i] = TERRAIN.HOUSE;
+          totalStructures++;
+        }
+      }
+    }
+  }
+
+  // Special buildings in villages
+  const specials = [TERRAIN.HOSPITAL, TERRAIN.SCHOOL, TERRAIN.FIRE_STATION, TERRAIN.GAS_STATION];
+  villages.forEach((v, vi) => {
+    if (vi < specials.length) {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const px = v.x + dx, py = v.y + dy;
+          if (px < 0 || px >= MAP_W || py < 0 || py >= MAP_H) continue;
+          if (map[py * MAP_W + px] === TERRAIN.HOUSE) {
+            map[py * MAP_W + px] = specials[vi];
+            totalStructures--; // was counted as house
+            totalStructures++;
+            break;
+          }
+        }
+        break;
+      }
+    }
+  });
+
+  // Count total structures
+  totalStructures = 0;
+  for (let i = 0; i < MAP_W * MAP_H; i++) {
+    if (STRUCTURE_VALUE[map[i]]) totalStructures++;
+  }
+}
+
+// ─── Fire System ───
+function ignite(x, y) {
+  if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return;
+  const i = y * MAP_W + x;
+  if (fireMap[i] > 0 || FLAMMABILITY[map[i]] === 0) return;
+  if (burnMap[i] >= BURN_TIME[map[i]] && BURN_TIME[map[i]] > 0) return;
+  fireMap[i] = 0.1;
+}
+
+function spreadFire() {
+  const newFires = [];
+  const windDx = Math.cos(windAngle);
+  const windDy = Math.sin(windAngle);
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
+
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const i = y * MAP_W + x;
+      if (fireMap[i] <= 0) continue;
+
+      // Grow fire
+      fireMap[i] = Math.min(1, fireMap[i] + 0.008);
+      burnMap[i] += fireMap[i];
+
+      // Smoke
+      smokeMap[i] = Math.min(1, smokeMap[i] + 0.02);
+
+      // Check if burned out
+      if (BURN_TIME[map[i]] > 0 && burnMap[i] >= BURN_TIME[map[i]]) {
+        fireMap[i] = 0;
+        // Structure destroyed
+        if (STRUCTURE_VALUE[map[i]]) {
+          structuresLost++;
+          addAlert(`Structure destroyed at (${x},${y})!`, 'critical');
+          // Gas station explosion
+          if (map[i] === TERRAIN.GAS_STATION) {
+            addAlert('GAS STATION EXPLODED!', 'critical');
+            for (let dy = -4; dy <= 4; dy++)
+              for (let dx = -4; dx <= 4; dx++)
+                if (Math.hypot(dx, dy) < 4.5) ignite(x + dx, y + dy);
+          }
+        }
+        continue;
+      }
+
+      // Spread to neighbors
+      if (fireMap[i] > 0.3 && Math.random() < 0.06) {
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) continue;
+          const ni = ny * MAP_W + nx;
+          if (fireMap[ni] > 0 || FLAMMABILITY[map[ni]] === 0) continue;
+          if (burnMap[ni] >= BURN_TIME[map[ni]] && BURN_TIME[map[ni]] > 0) continue;
+
+          // Wind factor
+          const dot = dx * windDx + dy * windDy;
+          const windBonus = dot > 0 ? dot * windSpeed * 0.03 : 0;
+          const diag = (dx !== 0 && dy !== 0) ? 0.7 : 1;
+          const chance = FLAMMABILITY[map[ni]] * diag * (0.15 + windBonus);
+
+          if (Math.random() < chance) {
+            newFires.push([nx, ny]);
+          }
+        }
+      }
+    }
+  }
+
+  newFires.forEach(([x, y]) => ignite(x, y));
+
+  // Dissipate smoke
+  for (let i = 0; i < smokeMap.length; i++) {
+    if (fireMap[i] <= 0 && smokeMap[i] > 0) {
+      smokeMap[i] = Math.max(0, smokeMap[i] - 0.005);
+    }
+  }
+}
+
+// ─── Units ───
+let unitIdCounter = 0;
+function createUnit(type, x, y) {
+  const def = UNIT_DEFS[type];
+  if (budget < def.cost) {
+    addAlert('Not enough budget!', 'warning');
+    return null;
+  }
+  budget -= def.cost;
+  const unit = {
+    id: ++unitIdCounter,
+    type,
+    x, y,
+    targetX: x, targetY: y,
+    waypoints: [],   // [{x, y}] queued destinations
+    loopRoute: false, // loop back to first waypoint when done
+    water: def.water,
+    maxWater: def.water,
+    active: true,
+    fighting: false,
+    clearing: false,
+    evacuating: false,
+    waitTicks: 0,     // pause at waypoint to perform actions
+  };
+  units.push(unit);
+  addAlert(`${def.name} deployed`, 'info');
+  return unit;
+}
+
+function updateUnits() {
+  for (const u of units) {
+    if (!u.active) continue;
+    const def = UNIT_DEFS[u.type];
+
+    // Move toward target
+    const dx = u.targetX - u.x;
+    const dy = u.targetY - u.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 0.15) {
+      const speed = def.speed * 0.05;
+      // Non-flying units slow down off-road
+      let moveMult = 1;
+      if (!def.flying) {
+        const tileX = Math.floor(u.x), tileY = Math.floor(u.y);
+        if (tileX >= 0 && tileX < MAP_W && tileY >= 0 && tileY < MAP_H) {
+          const terr = map[tileY * MAP_W + tileX];
+          if (terr === TERRAIN.ROAD) moveMult = 1.5;
+          else if (terr === TERRAIN.FOREST || terr === TERRAIN.DENSE_FOREST) moveMult = 0.5;
+          else if (terr === TERRAIN.LAKE && !def.flying) moveMult = 0.1;
+        }
+      }
+      u.x += (dx / dist) * speed * moveMult;
+      u.y += (dy / dist) * speed * moveMult;
+      u.fighting = false;
+      u.clearing = false;
+      u.waitTicks = 0;
+    } else {
+      // At destination — perform actions
+      let busy = false;
+
+      // Fight fire
+      if (def.power > 0 && u.water > 0) {
+        let fought = false;
+        const range = def.range;
+        for (let ty = Math.floor(u.y - range); ty <= Math.ceil(u.y + range); ty++) {
+          for (let tx = Math.floor(u.x - range); tx <= Math.ceil(u.x + range); tx++) {
+            if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+            if (Math.hypot(tx - u.x, ty - u.y) > range) continue;
+            const ti = ty * MAP_W + tx;
+            if (fireMap[ti] > 0) {
+              fireMap[ti] = Math.max(0, fireMap[ti] - def.power * 0.02);
+              u.water = Math.max(0, u.water - 0.15);
+              fought = true;
+            }
+          }
+        }
+        u.fighting = fought;
+        if (fought) busy = true;
+      }
+
+      // Refill water near lake
+      if (u.water < u.maxWater) {
+        let refilling = false;
+        const range = 2;
+        for (let ty = Math.floor(u.y - range); ty <= Math.ceil(u.y + range); ty++) {
+          for (let tx = Math.floor(u.x - range); tx <= Math.ceil(u.x + range); tx++) {
+            if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+            if (map[ty * MAP_W + tx] === TERRAIN.LAKE) {
+              u.water = Math.min(u.maxWater, u.water + 0.5);
+              refilling = true;
+              break;
+            }
+          }
+        }
+        if (refilling) busy = true;
+      }
+
+      // Bulldozer clearing
+      if (def.canClear) {
+        const ti = Math.floor(u.y) * MAP_W + Math.floor(u.x);
+        const terr = map[ti];
+        if (terr === TERRAIN.FOREST || terr === TERRAIN.DENSE_FOREST || terr === TERRAIN.GRASS) {
+          if (fireMap[ti] <= 0) {
+            map[ti] = TERRAIN.ROAD;
+            u.clearing = true;
+            busy = true;
+          }
+        }
+      }
+
+      // Squad evacuation
+      if (def.canEvac) {
+        const ti = Math.floor(u.y) * MAP_W + Math.floor(u.x);
+        const terr = map[ti];
+        if (terr === TERRAIN.HOUSE || terr === TERRAIN.HOSPITAL || terr === TERRAIN.SCHOOL) {
+          if (fireMap[ti] <= 0 && Math.random() < 0.02) {
+            civiliansEvac++;
+            u.evacuating = true;
+          } else {
+            u.evacuating = false;
+          }
+        }
+      }
+
+      // Advance to next waypoint when not busy (or after waiting)
+      if (u.waypoints.length > 0) {
+        if (!busy) u.waitTicks++;
+        // Move on after brief pause (30 ticks ~1s) or immediately if nothing to do here
+        if (u.waitTicks > 30 || !busy) {
+          const next = u.waypoints.shift();
+          // If looping, push current target to end
+          if (u.loopRoute) {
+            u.waypoints.push({ x: u.targetX, y: u.targetY });
+          }
+          u.targetX = next.x;
+          u.targetY = next.y;
+          u.waitTicks = 0;
+        }
+      }
+    }
+  }
+}
+
+// ─── Waves ───
+function spawnFires() {
+  const count = 2 + wave;
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    while (attempts < 100) {
+      const x = Math.floor(Math.random() * MAP_W);
+      const y = Math.floor(Math.random() * MAP_H);
+      if (FLAMMABILITY[map[y * MAP_W + x]] > 0 && fireMap[y * MAP_W + x] === 0) {
+        ignite(x, y);
+        addAlert(`New fire at (${x}, ${y})!`, 'critical');
+        break;
+      }
+      attempts++;
+    }
+  }
+}
+
+function checkWave() {
+  // Count active fires
+  let activeFires = 0;
+  for (let i = 0; i < fireMap.length; i++) if (fireMap[i] > 0) activeFires++;
+
+  // New wave when fires are low
+  if (activeFires < 5 && gameTick > wave * 600) {
+    wave++;
+    budget += 100 + wave * 30;
+    windAngle += (Math.random() - 0.5) * 1.5;
+    windSpeed = 3 + Math.random() * 8;
+    spawnFires();
+    addAlert(`Wave ${wave} — new fires! Budget +${100 + wave * 30}`, 'warning');
+  }
+
+  // Auto-escalate every ~30 seconds
+  if (gameTick % 900 === 0 && gameTick > 0) {
+    const extraFires = Math.floor(wave * 0.5);
+    for (let i = 0; i < extraFires; i++) {
+      const x = Math.floor(Math.random() * MAP_W);
+      const y = Math.floor(Math.random() * MAP_H);
+      if (FLAMMABILITY[map[y * MAP_W + x]] > 0) ignite(x, y);
+    }
+  }
+}
+
+// ─── Wind ───
+function updateWind() {
+  windChangeTimer++;
+  if (windChangeTimer > 1200) {
+    windAngle += (Math.random() - 0.5) * 0.8;
+    windSpeed = Math.max(2, Math.min(12, windSpeed + (Math.random() - 0.5) * 3));
+    windChangeTimer = 0;
+    addAlert('Wind shifted!', 'warning');
+  }
+}
+
+// ─── Game Over ───
+function checkGameOver() {
+  if (totalStructures === 0) return;
+  damagePercent = structuresLost / totalStructures;
+  if (damagePercent >= 0.6) {
+    gameOver = true;
+    paused = true;
+    const el = document.getElementById('game-over');
+    el.style.display = 'flex';
+    const mins = Math.floor(gameTick / 30 / 60);
+    const secs = Math.floor((gameTick / 30) % 60);
+    document.getElementById('final-stats').innerHTML =
+      `Structures saved: ${totalStructures - structuresLost} / ${totalStructures}<br>` +
+      `Structures lost: ${structuresLost}<br>` +
+      `Civilians evacuated: ${civiliansEvac}<br>` +
+      `Waves survived: ${wave}<br>` +
+      `Time: ${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+}
+
+// ─── Alerts ───
+function addAlert(msg, type) {
+  alerts.unshift({ msg, type, time: gameTick });
+  if (alerts.length > 30) alerts.pop();
+}
+
+// ─── Rendering ───
+function drawMap() {
+  const startTileX = Math.max(0, Math.floor(camX / TILE));
+  const startTileY = Math.max(0, Math.floor(camY / TILE));
+  const endTileX = Math.min(MAP_W, Math.ceil((camX + canvas.width / zoom) / TILE) + 1);
+  const endTileY = Math.min(MAP_H, Math.ceil((camY + canvas.height / zoom) / TILE) + 1);
+
+  for (let y = startTileY; y < endTileY; y++) {
+    for (let x = startTileX; x < endTileX; x++) {
+      const i = y * MAP_W + x;
+      const screenX = x * TILE - camX;
+      const screenY = y * TILE - camY;
+
+      // Base terrain
+      const burned = burnMap[i] > 0 && BURN_TIME[map[i]] > 0 ? burnMap[i] / BURN_TIME[map[i]] : 0;
+      ctx.fillStyle = TERRAIN_COLORS[map[i]];
+      ctx.fillRect(screenX, screenY, TILE, TILE);
+
+      // Burn darkening
+      if (burned > 0 && fireMap[i] <= 0) {
+        ctx.fillStyle = `rgba(30,20,10,${Math.min(0.8, burned)})`;
+        ctx.fillRect(screenX, screenY, TILE, TILE);
+      }
+
+      // Destroyed structure marker
+      if (burned >= 1 && STRUCTURE_VALUE[map[i]]) {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(screenX, screenY, TILE, TILE);
+        ctx.strokeStyle = '#555';
+        ctx.strokeRect(screenX + 2, screenY + 2, TILE - 4, TILE - 4);
+      }
+
+      // Structure details
+      if (burned < 1) {
+        if (map[i] === TERRAIN.HOUSE) {
+          ctx.fillStyle = '#a08060';
+          ctx.fillRect(screenX + 3, screenY + 3, TILE - 6, TILE - 6);
+          ctx.fillStyle = '#c0543b';
+          ctx.beginPath();
+          ctx.moveTo(screenX + TILE / 2, screenY + 1);
+          ctx.lineTo(screenX + TILE - 2, screenY + 7);
+          ctx.lineTo(screenX + 2, screenY + 7);
+          ctx.fill();
+        } else if (map[i] === TERRAIN.HOSPITAL) {
+          ctx.fillStyle = '#ecf0f1';
+          ctx.fillRect(screenX + 2, screenY + 2, TILE - 4, TILE - 4);
+          ctx.fillStyle = '#e74c3c';
+          ctx.fillRect(screenX + 8, screenY + 4, 4, 12);
+          ctx.fillRect(screenX + 4, screenY + 8, 12, 4);
+        } else if (map[i] === TERRAIN.SCHOOL) {
+          ctx.fillStyle = '#f0c040';
+          ctx.fillRect(screenX + 2, screenY + 4, TILE - 4, TILE - 6);
+          ctx.fillStyle = '#c0543b';
+          ctx.fillRect(screenX + 4, screenY + 2, TILE - 8, 4);
+        } else if (map[i] === TERRAIN.FIRE_STATION) {
+          ctx.fillStyle = '#e94560';
+          ctx.fillRect(screenX + 2, screenY + 2, TILE - 4, TILE - 4);
+          ctx.fillStyle = '#fff';
+          ctx.font = '10px JetBrains Mono';
+          ctx.fillText('F', screenX + 6, screenY + 14);
+        } else if (map[i] === TERRAIN.GAS_STATION) {
+          ctx.fillStyle = '#7f8c8d';
+          ctx.fillRect(screenX + 2, screenY + 2, TILE - 4, TILE - 4);
+          ctx.fillStyle = '#f39c12';
+          ctx.fillRect(screenX + 6, screenY + 6, 8, 8);
+        } else if (map[i] === TERRAIN.FOREST) {
+          // Tree
+          ctx.fillStyle = '#1a5e0a';
+          ctx.beginPath();
+          ctx.arc(screenX + TILE / 2, screenY + TILE / 2 - 2, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#5a3a1a';
+          ctx.fillRect(screenX + 8, screenY + 12, 4, 6);
+        } else if (map[i] === TERRAIN.DENSE_FOREST) {
+          ctx.fillStyle = '#0e4a05';
+          ctx.beginPath();
+          ctx.arc(screenX + 6, screenY + 8, 5, 0, Math.PI * 2);
+          ctx.arc(screenX + 14, screenY + 8, 5, 0, Math.PI * 2);
+          ctx.arc(screenX + 10, screenY + 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (map[i] === TERRAIN.LAKE) {
+          // Water shimmer
+          const shimmer = Math.sin(gameTick * 0.05 + x * 0.3 + y * 0.2) * 0.1;
+          ctx.fillStyle = `rgba(100,180,255,${0.15 + shimmer})`;
+          ctx.fillRect(screenX, screenY, TILE, TILE);
+        }
+      }
+
+      // Fire
+      if (fireMap[i] > 0) {
+        const intensity = fireMap[i];
+        const flicker = 0.7 + Math.random() * 0.3;
+        // Glow
+        ctx.fillStyle = `rgba(255, ${Math.floor(80 + 100 * (1 - intensity))}, 0, ${intensity * 0.7 * flicker})`;
+        ctx.fillRect(screenX, screenY, TILE, TILE);
+        // Core
+        if (intensity > 0.3) {
+          const s = TILE * intensity * 0.5;
+          ctx.fillStyle = `rgba(255, ${Math.floor(200 * (1 - intensity))}, 0, ${0.9 * flicker})`;
+          ctx.beginPath();
+          ctx.arc(screenX + TILE / 2 + (Math.random() - 0.5) * 3,
+                  screenY + TILE / 2 + (Math.random() - 0.5) * 3,
+                  s, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Smoke
+      if (smokeMap[i] > 0.1 && fireMap[i] <= 0) {
+        ctx.fillStyle = `rgba(60,50,40,${smokeMap[i] * 0.3})`;
+        ctx.fillRect(screenX, screenY, TILE, TILE);
+      }
+    }
+  }
+}
+
+function drawUnits() {
+  for (const u of units) {
+    if (!u.active) continue;
+    const def = UNIT_DEFS[u.type];
+    const sx = (u.x * TILE) - camX;
+    const sy = (u.y * TILE) - camY;
+
+    // Selection ring
+    if (u === selectedUnit) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, TILE * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Range circle
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, def.range * TILE, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Unit body
+    ctx.fillStyle = def.color;
+    if (u.type === 'truck') {
+      ctx.fillRect(sx + 3, sy + 5, TILE - 6, TILE - 8);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(sx + 4, sy + 6, 4, 3);
+    } else if (u.type === 'squad') {
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2 - 1, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (u.type === 'heli') {
+      // Rotor animation
+      const rotorAngle = gameTick * 0.3;
+      ctx.save();
+      ctx.translate(sx + TILE / 2, sy + TILE / 2);
+      ctx.rotate(rotorAngle);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(-8, -1, 16, 2);
+      ctx.restore();
+      ctx.fillStyle = def.color;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (u.type === 'dozer') {
+      ctx.fillRect(sx + 2, sy + 6, TILE - 4, TILE - 10);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sx + 2, sy + TILE - 6, TILE - 4, 4);
+    }
+
+    // Water bar
+    if (def.water > 0) {
+      const barW = TILE - 4;
+      const pct = u.water / u.maxWater;
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(sx + 2, sy - 4, barW, 3);
+      ctx.fillStyle = pct > 0.3 ? '#3498db' : '#e74c3c';
+      ctx.fillRect(sx + 2, sy - 4, barW * pct, 3);
+    }
+
+    // Fighting indicator
+    if (u.fighting) {
+      ctx.fillStyle = `rgba(100,180,255,${0.3 + Math.random() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(sx + TILE / 2, sy + TILE / 2, def.range * TILE * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Waypoint route line
+    if (u === selectedUnit) {
+      // Build full path: unit -> target -> waypoints
+      const path = [
+        { x: u.x, y: u.y },
+        { x: u.targetX, y: u.targetY },
+        ...u.waypoints
+      ];
+
+      ctx.strokeStyle = u.loopRoute ? 'rgba(100,220,255,0.4)' : 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(path[0].x * TILE - camX + TILE / 2, path[0].y * TILE - camY + TILE / 2);
+      for (let pi = 1; pi < path.length; pi++) {
+        ctx.lineTo(path[pi].x * TILE - camX + TILE / 2, path[pi].y * TILE - camY + TILE / 2);
+      }
+      // Loop line back to first waypoint
+      if (u.loopRoute && path.length > 2) {
+        ctx.lineTo(path[1].x * TILE - camX + TILE / 2, path[1].y * TILE - camY + TILE / 2);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw waypoint markers
+      for (let pi = 1; pi < path.length; pi++) {
+        const wpx = path[pi].x * TILE - camX + TILE / 2;
+        const wpy = path[pi].y * TILE - camY + TILE / 2;
+        const isTarget = pi === 1;
+        ctx.strokeStyle = isTarget ? 'rgba(255,255,255,0.6)' : 'rgba(100,220,255,0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(wpx, wpy, isTarget ? 5 : 4, 0, Math.PI * 2);
+        ctx.stroke();
+        // Waypoint number
+        if (pi > 1) {
+          ctx.fillStyle = 'rgba(100,220,255,0.8)';
+          ctx.font = '9px JetBrains Mono';
+          ctx.fillText(pi, wpx + 6, wpy - 4);
+        }
+      }
+
+      // Loop icon near first waypoint
+      if (u.loopRoute && path.length > 2) {
+        const lx = path[1].x * TILE - camX + TILE / 2;
+        const ly = path[1].y * TILE - camY + TILE / 2;
+        ctx.fillStyle = 'rgba(100,220,255,0.8)';
+        ctx.font = '11px JetBrains Mono';
+        ctx.fillText('↻', lx - 14, ly - 6);
+      }
+    }
+  }
+}
+
+function drawMinimap() {
+  miniCanvas.width = MAP_W * 2;
+  miniCanvas.height = MAP_H * 2;
+  const md = miniCtx.createImageData(MAP_W * 2, MAP_H * 2);
+
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const i = y * MAP_W + x;
+      let r, g, b;
+
+      if (fireMap[i] > 0) {
+        r = 255; g = 60; b = 0;
+      } else {
+        const c = TERRAIN_COLORS[map[i]];
+        const hex = c.replace('#', '');
+        r = parseInt(hex.substr(0, 2), 16);
+        g = parseInt(hex.substr(2, 2), 16);
+        b = parseInt(hex.substr(4, 2), 16);
+        if (burnMap[i] > 0 && BURN_TIME[map[i]] > 0 && burnMap[i] >= BURN_TIME[map[i]]) {
+          r = 40; g = 30; b = 20;
+        }
+      }
+
+      // Draw 2x2 pixels
+      for (let py = 0; py < 2; py++) {
+        for (let px = 0; px < 2; px++) {
+          const pi = ((y * 2 + py) * MAP_W * 2 + (x * 2 + px)) * 4;
+          md.data[pi] = r; md.data[pi + 1] = g; md.data[pi + 2] = b; md.data[pi + 3] = 255;
+        }
+      }
+    }
+  }
+
+  // Units on minimap
+  for (const u of units) {
+    if (!u.active) continue;
+    const ux = Math.floor(u.x * 2), uy = Math.floor(u.y * 2);
+    for (let py = -1; py <= 1; py++) {
+      for (let px = -1; px <= 1; px++) {
+        const mx = ux + px, my = uy + py;
+        if (mx >= 0 && mx < MAP_W * 2 && my >= 0 && my < MAP_H * 2) {
+          const pi = (my * MAP_W * 2 + mx) * 4;
+          md.data[pi] = 255; md.data[pi + 1] = 255; md.data[pi + 2] = 255; md.data[pi + 3] = 255;
+        }
+      }
+    }
+  }
+
+  miniCtx.putImageData(md, 0, 0);
+
+  // Camera viewport
+  miniCtx.strokeStyle = '#fff';
+  miniCtx.lineWidth = 1;
+  miniCtx.strokeRect(
+    camX / TILE * 2, camY / TILE * 2,
+    (canvas.width / zoom) / TILE * 2, (canvas.height / zoom) / TILE * 2
+  );
+}
+
+function drawDeployPreview(mouseX, mouseY) {
+  if (!deployMode) return;
+  const wx = (mouseX / zoom + camX) / TILE;
+  const wy = (mouseY / zoom + camY) / TILE;
+  const def = UNIT_DEFS[deployMode];
+  const sx = wx * TILE - camX;
+  const sy = wy * TILE - camY;
+
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = def.color;
+  ctx.beginPath();
+  ctx.arc(sx + TILE / 2, sy + TILE / 2, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = def.color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(sx + TILE / 2, sy + TILE / 2, def.range * TILE, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// ─── UI Updates ───
+function updateUI() {
+  document.getElementById('stat-saved').textContent = totalStructures - structuresLost;
+  document.getElementById('stat-lost').textContent = structuresLost;
+  document.getElementById('stat-evac').textContent = civiliansEvac;
+  document.getElementById('stat-budget').textContent = budget;
+  document.getElementById('stat-wave').textContent = wave;
+
+  const secs = Math.floor(gameTick / 30);
+  const mins = Math.floor(secs / 60);
+  document.getElementById('stat-time').textContent = `${mins}:${(secs % 60).toString().padStart(2, '0')}`;
+
+  let burning = 0;
+  for (let i = 0; i < fireMap.length; i++) if (fireMap[i] > 0) burning++;
+  document.getElementById('stat-burning').textContent = burning;
+
+  const badge = document.getElementById('pause-badge');
+  badge.textContent = paused ? 'PAUSED' : 'RUNNING';
+  badge.className = paused ? 'paused' : 'running';
+
+  // Wind arrow
+  const arrow = document.getElementById('wind-arrow');
+  arrow.style.transform = `rotate(${windAngle * 180 / Math.PI}deg)`;
+  document.getElementById('wind-speed').textContent = windSpeed.toFixed(0);
+
+  // Unit list
+  const ul = document.getElementById('unit-list');
+  ul.innerHTML = '';
+  for (const u of units) {
+    if (!u.active) continue;
+    const def = UNIT_DEFS[u.type];
+    const card = document.createElement('div');
+    card.className = 'unit-card' + (u === selectedUnit ? ' selected' : '');
+    let status = 'Idle';
+    if (Math.hypot(u.targetX - u.x, u.targetY - u.y) > 0.3) status = 'Moving';
+    if (u.fighting) status = 'Fighting fire';
+    if (u.clearing) status = 'Clearing';
+    if (u.evacuating) status = 'Evacuating';
+    if (def.water > 0 && u.water <= 0) status = 'No water!';
+
+    const routeInfo = u.waypoints.length > 0
+      ? `<div style="color:#64dcff;font-size:10px;">Route: ${u.waypoints.length} wp${u.loopRoute ? ' ↻' : ''}</div>`
+      : (u.loopRoute ? `<div style="color:#64dcff;font-size:10px;">Patrol ↻</div>` : '');
+    card.innerHTML = `
+      <div class="unit-name" style="color:${def.color}">${def.name} #${u.id}</div>
+      <div>${status}</div>
+      ${routeInfo}
+      ${def.water > 0 ? `
+        <div class="unit-bar"><div class="unit-bar-fill water-fill" style="width:${(u.water/u.maxWater)*100}%"></div></div>
+      ` : ''}
+    `;
+    card.style.pointerEvents = 'auto';
+    const unitRef = u;
+    card.addEventListener('click', (e) => { e.stopPropagation(); selectedUnit = unitRef; deployMode = null; });
+    ul.appendChild(card);
+  }
+
+  // Alerts
+  const al = document.getElementById('alerts');
+  al.innerHTML = '';
+  alerts.slice(0, 10).forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'alert-item ' + (a.type || '');
+    div.textContent = a.msg;
+    al.appendChild(div);
+  });
+}
+
+function buildDeployButtons() {
+  const wrap = document.getElementById('deploy-btns');
+  wrap.innerHTML = '';
+  for (const [key, def] of Object.entries(UNIT_DEFS)) {
+    const btn = document.createElement('button');
+    btn.style.cssText = `
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 8px;
+      background: ${def.color}22; color: ${def.color}; border: 1px solid ${def.color}55;
+      border-radius: 3px; cursor: pointer; flex: 1; min-width: 100px;
+      position: relative; text-align: center; line-height: 1.5;
+    `;
+    btn.innerHTML = `<span style="pointer-events:none"><b>[${def.key}]</b> ${def.name}<br>$${def.cost}</span>`;
+    btn.addEventListener('click', (e) => { e.stopPropagation(); deployMode = key; selectedUnit = null; });
+    wrap.appendChild(btn);
+  }
+}
+
+// ─── Input ───
+let mouseX = 0, mouseY = 0;
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 0 && !e.shiftKey) {
+    const wx = (e.offsetX / zoom + camX) / TILE;
+    const wy = (e.offsetY / zoom + camY) / TILE;
+
+    if (deployMode) {
+      // Deploy unit
+      createUnit(deployMode, wx, wy);
+      if (!e.ctrlKey) deployMode = null;
+      return;
+    }
+
+    // Check unit selection
+    let clicked = null;
+    for (const u of units) {
+      if (!u.active) continue;
+      if (Math.hypot(u.x - wx, u.y - wy) < 1) { clicked = u; break; }
+    }
+
+    if (clicked) {
+      selectedUnit = clicked;
+    } else if (selectedUnit) {
+      if (e.ctrlKey) {
+        // Ctrl+click: queue waypoint
+        selectedUnit.waypoints.push({ x: wx, y: wy });
+      } else {
+        // Regular click: clear queue, set new target
+        selectedUnit.waypoints = [];
+        selectedUnit.loopRoute = false;
+        selectedUnit.targetX = wx;
+        selectedUnit.targetY = wy;
+      }
+    }
+  }
+
+  if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    camStartX = camX;
+    camStartY = camY;
+    e.preventDefault();
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.offsetX;
+  mouseY = e.offsetY;
+  if (dragging) {
+    camX = camStartX - (e.clientX - dragStartX) / zoom;
+    camY = camStartY - (e.clientY - dragStartY) / zoom;
+    clampCamera();
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (e.button === 1 || e.button === 0) dragging = false;
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (selectedUnit) {
+    const wx = (e.offsetX / zoom + camX) / TILE;
+    const wy = (e.offsetY / zoom + camY) / TILE;
+    if (e.ctrlKey) {
+      // Ctrl+right-click: queue waypoint
+      selectedUnit.waypoints.push({ x: wx, y: wy });
+    } else {
+      // Right-click: clear queue, new direct order
+      selectedUnit.waypoints = [];
+      selectedUnit.loopRoute = false;
+      selectedUnit.targetX = wx;
+      selectedUnit.targetY = wy;
+    }
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const oldZoom = zoom;
+  zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+  zoom = Math.max(0.5, Math.min(3, zoom));
+  // Zoom toward mouse
+  const wx = e.offsetX / oldZoom + camX;
+  const wy = e.offsetY / oldZoom + camY;
+  camX = wx - e.offsetX / zoom;
+  camY = wy - e.offsetY / zoom;
+  clampCamera();
+}, { passive: false });
+
+// Minimap click
+miniCanvas.addEventListener('click', e => {
+  const rect = miniCanvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width * MAP_W;
+  const my = (e.clientY - rect.top) / rect.height * MAP_H;
+  camX = mx * TILE - (canvas.width / zoom) / 2;
+  camY = my * TILE - (canvas.height / zoom) / 2;
+  clampCamera();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameStarted && !gameOver) paused = !paused;
+  }
+  if (e.code === 'Escape') {
+    selectedUnit = null;
+    deployMode = null;
+  }
+  // Deploy hotkeys
+  const keyMap = { '1': 'truck', '2': 'squad', '3': 'heli', '4': 'dozer' };
+  if (keyMap[e.key]) {
+    deployMode = keyMap[e.key];
+    selectedUnit = null;
+  }
+  // Toggle loop route
+  if (e.key === 'l' || e.key === 'L') {
+    if (selectedUnit) {
+      selectedUnit.loopRoute = !selectedUnit.loopRoute;
+      addAlert(
+        `${UNIT_DEFS[selectedUnit.type].name} #${selectedUnit.id}: patrol ${selectedUnit.loopRoute ? 'ON' : 'OFF'}`,
+        'info'
+      );
+    }
+  }
+  // Clear waypoints
+  if (e.key === 'x' || e.key === 'X') {
+    if (selectedUnit) {
+      selectedUnit.waypoints = [];
+      selectedUnit.loopRoute = false;
+      addAlert(`${UNIT_DEFS[selectedUnit.type].name} #${selectedUnit.id}: route cleared`, 'info');
+    }
+  }
+});
+
+function clampCamera() {
+  const maxX = MAP_W * TILE - canvas.width / zoom;
+  const maxY = MAP_H * TILE - canvas.height / zoom;
+  camX = Math.max(0, Math.min(maxX, camX));
+  camY = Math.max(0, Math.min(maxY, camY));
+}
+
+// ─── Resize ───
+function resize() {
+  const wrap = document.getElementById('canvas-wrap');
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  clampCamera();
+}
+window.addEventListener('resize', resize);
+
+// ─── Game Loop ───
+function tick() {
+  if (!paused && gameStarted && !gameOver) {
+    gameTick++;
+    spreadFire();
+    updateUnits();
+    updateWind();
+    checkWave();
+    checkGameOver();
+    // Earn budget slowly
+    if (gameTick % 300 === 0) {
+      budget += 20;
+    }
+  }
+}
+
+function render() {
+  ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.clearRect(0, 0, canvas.width / zoom, canvas.height / zoom);
+  drawMap();
+  drawUnits();
+  drawDeployPreview(mouseX, mouseY);
+  ctx.restore();
+
+  // Pause overlay
+  if (paused && gameStarted && !gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e94560';
+    ctx.font = 'bold 24px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED — SPACE to resume', canvas.width / 2, canvas.height / 2);
+    ctx.textAlign = 'left';
+  }
+
+  drawMinimap();
+  updateUI();
+}
+
+let lastTime = 0;
+const TICK_RATE = 1000 / 30; // 30 tps
+let accumulator = 0;
+
+function gameLoop(timestamp) {
+  const delta = timestamp - lastTime;
+  lastTime = timestamp;
+  accumulator += delta;
+
+  while (accumulator >= TICK_RATE) {
+    tick();
+    accumulator -= TICK_RATE;
+  }
+
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ─── Init ───
+function init() {
+  generateMap();
+  units = [];
+  alerts = [];
+  gameTick = 0;
+  wave = 1;
+  budget = 500;
+  structuresSaved = 0;
+  structuresLost = 0;
+  civiliansEvac = 0;
+  selectedUnit = null;
+  deployMode = null;
+  gameOver = false;
+  damagePercent = 0;
+  paused = true;
+
+  resize();
+  buildDeployButtons();
+
+  // Center camera
+  camX = (MAP_W * TILE - canvas.width / zoom) / 2;
+  camY = (MAP_H * TILE - canvas.height / zoom) / 2;
+  clampCamera();
+
+  // Initial fires
+  spawnFires();
+
+  addAlert('Fires reported! Deploy your units, Commander.', 'critical');
+  addAlert('Press SPACE to start the simulation.', 'warning');
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  document.getElementById('start-screen').style.display = 'none';
+  gameStarted = true;
+  init();
+  requestAnimationFrame(gameLoop);
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  document.getElementById('game-over').style.display = 'none';
+  init();
+  gameStarted = true;
+});
+</script>
+</body>
+</html>
